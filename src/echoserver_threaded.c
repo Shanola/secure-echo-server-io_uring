@@ -10,9 +10,6 @@
 #include <errno.h>
 #include <linux/tls.h>
 #include <netinet/tcp.h>
-#include <yaml.h>
-
-#include "parse.h"
 
 // Wolfcrypt
 #include <wolfssl/options.h>
@@ -22,28 +19,11 @@
 #include <wolfssl/wolfcrypt/aes.h>
 
 // Socket
-#define LISTENQ 1024
-#define PORT 50000
+#define LISTENQ 4096
+#define PORT 12345
 #define ECC_KEY_LEN 32
 
 #define MAX_MSG_LEN 4096
-
-// YAML
-#define YAML_FILE "tcp.yaml"
-#define QUERY_PARITY_OR_TCP_BYTE 1
-#define QUERY_IP_OR_DEVICE_BYTE 16
-#define QUERY_PORT_OR_BAUD_BYTE 4
-#define QUERY_PROTOID_OR_DATABIT_BYTE 2
-#define QUERY_SERVERID_OR_STOPBIT_BYTE 1	// 2
-#define QUERY_FC_BYTE 1 					// 2
-#define QUERY_STARTREGADDR_BYTE 2
-#define QUERY_COMMAND_BYTE 2
-#define QUERY_DURATION_BYTE 3 				// 1
-#define QUERY_RESERVED_BYTE 0
-#define QUERY_TOTAL_LEN 32 // should equal to sum of all query bytes
-
-#define QUERY_TCP 0
-#define QUERY_RTU 1
 
 enum
 {
@@ -289,9 +269,10 @@ int do_authentication(int infd, uint8_t *session_key, const uint8_t *psk, const 
     return ret;
 }
 
-int do_communication(int infd, query_t *query)
+int do_communication(int infd)
 {
     int ret;
+    char buf[MAX_MSG_LEN] = {};
     while (1) {
         ret = read(infd, buf, sizeof(buf));
 	if (ret <= 0) {
@@ -374,8 +355,9 @@ void *do_handle_client(void *arg)
 		return NULL;
     }
     printf("Handshake complete! %f msec.\n", (t2-t1)*1000);
-    free(arg);
-    return NULL;
+    print_hex(session_info->session_key, ECC_KEY_LEN,1);
+    //free(arg);
+    //return NULL;
 
 
     /* Configure Kernel TLS */
@@ -386,7 +368,7 @@ void *do_handle_client(void *arg)
     }
    
     /* Communication */
-    do_communication(infd, state.qlist);
+    do_communication(infd);
 
     close(infd);
     return NULL;
