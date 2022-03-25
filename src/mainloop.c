@@ -23,7 +23,7 @@
 
 #define PORT 12345
 #define LISTENQ 4096
-#define IOURING_QUEUE_DEPTH 4096
+#define IOURING_QUEUE_DEPTH 8192
 #define MAX_MSG_LEN 2048
 #define AUTH_MSG_LEN ECC_KEY_LEN*4
 #define MAX_CONNECTION 4096
@@ -163,7 +163,7 @@ void add_write(struct io_uring *ring, int fd, int bid, size_t size, unsigned fla
     io_uring_sqe_set_data(sqe, session_info);
     
 }
-void add_provide_buffers(struct io_uring *ring, int gid, int bid, unsigned msg_size, int buf_cnt)
+void add_provide_buffers(struct io_uring *ring, int bid, int gid, unsigned msg_size, int buf_cnt)
 {
     struct io_uring_sqe *sqe = io_uring_get_sqe(ring);
 
@@ -277,13 +277,13 @@ int main()
 
 	    int type = session_info->event_type;
 	    if (type == PROV_BUF) {
-	        printf("[PROV_BUF]\n");
+	        //printf("[PROV_BUF]\n");
                 if (cqe->res < 0) {
                     printf("cqe->res = %d\n", cqe->res);
                     return 0;
                 }
             } else if (type == ACCEPT) {
-	        printf("[ACCEPT]\n");
+	        //printf("[ACCEPT]\n");
                 int sock_conn_fd = cqe->res;
 
                 // only auth_read when there is no error, >= 0
@@ -295,7 +295,7 @@ int main()
                 // new connected client; read data from socket and re-add accept to monitor for new connections
                 add_accept(&ring, listenfd, (struct sockaddr *)&client_addr, &client_len, 0);
             } else if (type == AUTH_READ) {
-	        printf("[AUTH_READ]\n");
+	        //printf("[AUTH_READ]\n");
 	        // extract read authentication request of client from buffer
 		int nbytes = cqe->res;
 		int bid = cqe->flags >> IORING_CQE_BUFFER_SHIFT;
@@ -313,12 +313,12 @@ int main()
 		    }
 		}
 	    } else if (type == AUTH_WRITE) {
-	        printf("[AUTH_WRITE]\n");
+	        //printf("[AUTH_WRITE]\n");
 	        add_provide_buffers(&ring, session_info->bid, group_id, MAX_MSG_LEN, 1);
 		config_ktls(session_info->infd, session_info->session_key);
 		add_read(&ring, session_info->infd, group_id, MAX_MSG_LEN, IOSQE_BUFFER_SELECT);
 	    } else if (type == COMM_READ) {
-	        printf("[COMM_READ]\n");
+	        //printf("[COMM_READ]\n");
 	        int nbytes = cqe->res;
 		int bid = cqe->flags >> 16;
 		if (nbytes <= 0) {
@@ -329,7 +329,7 @@ int main()
 		    add_write(&ring, session_info->infd, bid, nbytes, 0);
 		}
             } else if (type == COMM_WRITE) {
-	        printf("[COMM_WRITE]\n");
+	        //printf("[COMM_WRITE]\n");
 	        add_provide_buffers(&ring, session_info->bid, group_id, MAX_MSG_LEN, 1);
 		add_read(&ring, session_info->infd, group_id, MAX_MSG_LEN, IOSQE_BUFFER_SELECT);
             }
