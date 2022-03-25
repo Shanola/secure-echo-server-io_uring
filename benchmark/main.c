@@ -21,8 +21,14 @@
 
 #define PORT 12345
 #define HOST "127.0.0.1"
-#define MAX_MSG_LEN 4096
+#define MAX_MSG_LEN 8192
 #define ECC_KEY_LEN 32
+
+
+typedef struct {
+    int msg;
+    int duration;
+} params_t;
 
 int outn = 0;
 int inn = 0;
@@ -235,23 +241,23 @@ int config_ktls(int infd, const uint8_t *session_key)
 }
 
 /* Wait for server's request, and send Modbus/TCP query to sensor */
-void do_communication(int sockfd)
+void do_communication(int sockfd, int msg_size, int duration)
 {
     double t1 = tvgetf();
     double t2;
     int ret;
-    char msg[512] = {0};
+    char msg[MAX_MSG_LEN] = {0};
 
     int in = 0;
     int out = 0;
     while (1) {
-        ret = write(sockfd, msg, sizeof(msg));
+        ret = write(sockfd, msg, msg_size);
 	out += 1;
-	ret = read(sockfd, msg, sizeof(msg));
+	ret = read(sockfd, msg, msg_size);
 	
 	in += 1;
 	t2 = tvgetf();
-	if ((t2-t1) >= 2) {
+	if ((t2-t1) >= duration) {
 	    pthread_mutex_lock(&mutex);
 	    outn += out;
 	    inn += in;
@@ -261,8 +267,9 @@ void do_communication(int sockfd)
     }
 }
 
-void *client_thread()
+void *client_thread(void *arg)
 {
+    params_t *param = arg;
     int ret; 
     int sockfd = 0;
 
@@ -331,22 +338,43 @@ void *client_thread()
 	return NULL;
     }
     
-    do_communication(sockfd);
+    do_communication(sockfd, param->msg, param->duration);
     //printf("Hello.\n");
     
     close(sockfd);
     return 0;
 }
 
-int main()
+int main(int argc, char *argv[])
 {
-    pthread_t thread[1000];
-    int num = 1000;
-    for (int i=0; i<num; i++) {
-        pthread_create(&thread[i], NULL, &client_thread, NULL);
+    pthread_t thread[10240];
+    int connections, msg, duration;
+    if (argc == 1) {
+        // default test, connections=20, msg_size=256 bytes, duration=5 second
+	printf("Default settings, conn=20, msg size=256 bytes, duration=5 seconds.\n");
+	connections = 20;
+	msg=256;
+	duration=5;
+	
+    } else if (argc == 4) {
+        connections = (strtol(argv[1], NULL, 10) > 10240 ? 10240 : strtol(argv[1], NULL, 10));
+	msg = strtol(argv[2], NULL, 10);
+	duration = strtol(argv[3], NULL, 10);
+    } else {
+        printf("usage: ./main <connections> <msg> <duration>.\n");
+	printf("connections max is 2000\n unit of msg is byte, duration is second");
+    }
+
+    params_t param = {
+        .msg = msg,
+	.duration=duration,
+    };
+
+    for (int i=0; i<connections; i++) {
+        pthread_create(&thread[i], NULL, &client_thread, &param);
     }
     //sleep(5);
-    for (int j=0; j < num; j++) {
+    for (int j=0; j < connections; j++) {
         pthread_join(thread[j], NULL);
     }
 

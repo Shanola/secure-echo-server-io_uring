@@ -22,11 +22,11 @@
 #include "secure.h"
 
 #define PORT 12345
-#define LISTENQ 4096
-#define IOURING_QUEUE_DEPTH 8192
+#define LISTENQ 10240
+#define IOURING_QUEUE_DEPTH 10240
 #define MAX_MSG_LEN 2048
 #define AUTH_MSG_LEN ECC_KEY_LEN*4
-#define MAX_CONNECTION 4096
+#define MAX_CONNECTION 10240
 #define BUFFERS_COUNT MAX_CONNECTION
 #define ECC_KEY_LEN 32
 #define AUTH_SUCCESS 0
@@ -304,6 +304,7 @@ int main()
 		    // read from auth_read may failed
 		    add_provide_buffers(&ring, bid, group_id, MAX_MSG_LEN, 1);
 		    close(session_info->infd);
+		    free(session_info);
 		} else {
 		    /* Take out msg from the buffer, and do authenticaiton */
 		    if (do_authentication(bufs[bid], MAX_MSG_LEN, session_info->session_key, psk, aid, rng, sha) != AUTH_SUCCESS) {  // obtain shared session key, <msg> to send to client
@@ -325,6 +326,7 @@ int main()
 		    // read from client may failed
 		    add_provide_buffers(&ring, bid, group_id, MAX_MSG_LEN, 1);
 		    close(session_info->infd);
+		    free(session_info);
 		} else {
 		    add_write(&ring, session_info->infd, bid, nbytes, 0);
 		}

@@ -276,13 +276,13 @@ int do_communication(int infd)
     while (1) {
         ret = read(infd, buf, sizeof(buf));
 	if (ret <= 0) {
-	    printf("read may failed\n");
+	    //printf("read may failed\n");
 	    break;
 	} else {
 	    write(infd, buf, ret);
 	}
     }
-    printf("comm finish, exit\n");
+    //printf("comm finish, exit\n");
 }
 
 int config_ktls(int infd, const uint8_t *session_key)
@@ -354,8 +354,8 @@ void *do_handle_client(void *arg)
 	    close(infd);
 		return NULL;
     }
-    printf("Handshake complete! %f msec.\n", (t2-t1)*1000);
-    print_hex(session_info->session_key, ECC_KEY_LEN,1);
+    //printf("Handshake complete! %f msec.\n", (t2-t1)*1000);
+    //print_hex(session_info->session_key, ECC_KEY_LEN,1);
     //free(arg);
     //return NULL;
 

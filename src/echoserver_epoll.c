@@ -23,7 +23,7 @@
 #include "secure.h"
 
 // socket
-#define LISTENQ 2048
+#define LISTENQ 10240
 #define PORT 12345
 #define ECC_KEY_LEN 32
 #define AUTH_MSG_LEN ECC_KEY_LEN*4
@@ -330,11 +330,6 @@ int main()
 		    config_ktls(s->fd, s->session_key);
 
 		    s->next_event = COMM;
-		    /*struct epoll_event event = {
-		    .data.ptr = s,
-		    .events = EPOLLIN | EPOLLET | EPOLLONESHOT,
-		    };
-		    epoll_ctl(s->epfd, EPOLL_CTL_MOD, s->fd, &event);*/
 		} else if(s->next_event == COMM) {
 		    int bytes_received = read(s->fd, s->buf, MAX_MSG_LEN);
 		    if (bytes_received <= 0) {
